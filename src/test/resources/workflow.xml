@@ -1,0 +1,52 @@
+<workflow-app name="test-app" xmlns="uri:oozie:workflow:0.4">
+    <start to="test-decision"/>
+    <decision name="test-decision">
+        <switch>
+            <case to="test-create">${fs:exists(&quot;oozieDirectory/sqoop-create&quot;) eq false}</case>
+            <default to="test-exec"/>
+        </switch>
+    </decision>
+    <action name="test-create">
+        <sqoop xmlns="uri:oozie:sqoop-action:0.4">
+            <job-tracker>test_job_tracker</job-tracker>
+            <name-node>test_namenode</name-node>
+            <prepare/>
+            <configuration>
+                <property>
+                    <name>mapred.job.queue.name</name>
+                    <value>1981838e-bcc9-4402-95eb-60c7f3ca6fbc</value>
+                </property>
+            </configuration>
+            <command>job --create 00000000-0000-0000-0000-000000000007 --meta-connect test_metastore_url:32158 -- import --connect FAKE_JDBC_URI --table table_in_database --num-mappers 1 --target-dir ${targetDir} --append</command>
+        </sqoop>
+        <ok to="test-flag"/>
+        <error to="fail"/>
+    </action>
+    <action name="test-flag">
+        <fs>
+            <touchz path="oozieDirectory/sqoop-create"/>
+        </fs>
+        <ok to="test-exec"/>
+        <error to="fail"/>
+    </action>
+    <action name="test-exec">
+        <sqoop xmlns="uri:oozie:sqoop-action:0.4">
+            <job-tracker>test_job_tracker</job-tracker>
+            <name-node>test_namenode</name-node>
+            <prepare/>
+            <configuration>
+                <property>
+                    <name>mapred.job.queue.name</name>
+                    <value>1981838e-bcc9-4402-95eb-60c7f3ca6fbc</value>
+                </property>
+            </configuration>
+            <command>job --exec 00000000-0000-0000-0000-000000000007 --meta-connect test_metastore_url:32158 -- --username john --password doe --</command>
+        </sqoop>
+        <ok to="end"/>
+        <error to="fail"/>
+    </action>
+    <kill name="fail">
+        <message>Error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+    <end name="end"/>
+</workflow-app>

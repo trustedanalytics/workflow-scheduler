@@ -1,0 +1,12 @@
+[
+  {
+    "name": "PostgreSQL",
+    "drivers": [
+      {
+        "name": "postgresql",
+        "version": "9.3",
+        "className": "org.postgresql.Driver"
+      }
+    ]
+  }
+]

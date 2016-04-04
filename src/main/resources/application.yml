@@ -1,0 +1,51 @@
+spring:
+  profiles: local
+
+server.port: 8080
+
+security:
+  ignored: /rest/**,/test/**,/*.js,/sdoc.jsp,/api-docs,/api-docs/default/*,/images/*,/lib/*,/css/*,/v2/api-docs
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.trustedanalytics: DEBUG
+
+
+endpoints.enabled: false
+endpoints.health.enabled: true
+
+sqoop.metastore: jdbc:hsqldb:hsql://localhost:16000/sqoop
+
+
+---
+
+spring:
+  profiles: cloud
+
+security:
+  ignored: /test/**,/*.js,/sdoc.jsp,/api-docs,/api-docs/default/*,/images/*,/lib/*,/css/*,/v2/api-docs
+
+spring.oauth2.resource:
+  id: cloud_controller
+  jwt:
+    keyUri: ${vcap.services.sso.credentials.tokenKey}
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.trustedanalytics: DEBUG
+
+flyway.initOnMigrate: true
+
+endpoints.enabled: false
+endpoints.health.enabled: true
+spring.datasource.platform: cloud
+spring.jpa.database: POSTGRESQL
+spring.datasource: platform=postgres
+spring.jpa.show-sql: true
+spring.jpa.hibernate.ddl-auto: ""
+spring.database.driverClassName: org.postgresql.Driver
+spring.datasource.url: jdbc:postgresql://${vcap.services.workflow-scheduler-db.credentials.hostname}:${vcap.services.workflow-scheduler-db.credentials.port}/${vcap.services.workflow-scheduler-db.credentials.dbname}
+spring.datasource.username: ${vcap.services.workflow-scheduler-db.username}
+spring.datasource.password: ${vcap.services.workflow-scheduler-db.credentials.password}

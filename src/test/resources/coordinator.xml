@@ -1,0 +1,33 @@
+<coordinator-app name="test" frequency="${coord:minutes(10)}" start="2077-07-04T08:15Z" end="2077-07-06T08:15Z" timezone="UTC" xmlns="uri:oozie:coordinator:0.4">
+    <action>
+        <workflow>
+            <app-path></app-path>
+            <configuration>
+                <property>
+                    <name>jobTracker</name>
+                    <value>test_job_tracker</value>
+                </property>
+                <property>
+                    <name>nameNode</name>
+                    <value>test_namenode</value>
+                </property>
+                <property>
+                    <name>queueName</name>
+                    <value>1981838e-bcc9-4402-95eb-60c7f3ca6fbc</value>
+                </property>
+                <property>
+                    <name>targetDir</name>
+                    <value>SqoopTargetDirectory</value>
+                </property>
+                <property>
+                    <name>oozie.libpath</name>
+                    <value>/user/oozie/share/lib/</value>
+                </property>
+                <property>
+                    <name>oozie.use.system.libpath</name>
+                    <value>true</value>
+                </property>
+            </configuration>
+        </workflow>
+    </action>
+</coordinator-app>

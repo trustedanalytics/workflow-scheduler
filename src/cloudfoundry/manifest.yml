@@ -1,0 +1,17 @@
+---
+applications:
+- name: workflow-scheduler
+  memory: 512M
+  instances: 1
+  host: workflow-scheduler
+  path: target/workflow-scheduler-0.4.0.jar
+  services:
+  - sso
+  - kerberos-instance
+  - hdfs-instance
+  - workflow-scheduler-db
+  env:
+    SPRING_PROFILES_ACTIVE: "cloud"
+    JOB_TRACKER: #example.com:8032
+    OOZIE_API_URL: #http://example.com:11000
+    SQOOP_METASTORE: #example.com:16000/sqoop
