@@ -12,6 +12,6 @@ applications:
   - workflow-scheduler-db
   env:
     SPRING_PROFILES_ACTIVE: "cloud"
-    JOB_TRACKER: #example.com:8032
-    OOZIE_API_URL: #http://example.com:11000
-    SQOOP_METASTORE: #example.com:16000/sqoop
+    #JOB_TRACKER: example.com:8032
+    #OOZIE_API_URL: http://example.com:11000
+    #SQOOP_METASTORE: example.com:16000/sqoop
