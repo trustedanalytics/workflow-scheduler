@@ -42,7 +42,7 @@ public class HdfsOrgSpecificSpace implements OrgSpecificSpace {
         Objects.requireNonNull(orgId);
 
         this.fileSystem = fileSystem;
-        this.root = new Path(String.format("hdfs://nameservice1/org/%s/brokers/userspace", orgId));
+        this.root = new Path(String.format("hdfs://nameservice1/org/%s/", orgId));
         this.random = () -> UUID.randomUUID().toString();
     }
 

@@ -52,7 +52,7 @@ public class WorkflowSchedulerConfigurationProvider {
             .databases(databases)
             .timezones(zones)
             .organizationDirectory(
-                String.format("hdfs://nameservice1/org/%s/brokers/userspace/", orgId))
+                String.format("hdfs://nameservice1/org/%s/", orgId))
             .build();
     }
 }
