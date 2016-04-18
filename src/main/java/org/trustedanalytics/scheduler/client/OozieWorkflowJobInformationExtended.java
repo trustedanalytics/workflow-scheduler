@@ -34,8 +34,6 @@ import java.util.regex.Pattern;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class OozieWorkflowJobInformationExtended extends OozieWorkflowJobInformation {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(OozieWorkflowJobInformationExtended.class);
-
     private String coordinatorId;
     private List<String> targetDirs;
 
@@ -78,12 +76,13 @@ public class OozieWorkflowJobInformationExtended extends OozieWorkflowJobInforma
     }
 
     private List<String> extractTargetIdsFromConfiguration(String conf) {
-        List<String> targetDirs = new ArrayList<>();
-        if (StringUtils.isEmpty(conf)) return targetDirs;
+        List<String> extractedTargetDirs= new ArrayList<>();
+        if (StringUtils.isEmpty(conf))
+            return extractedTargetDirs;
         final Matcher matcher = patter.matcher(conf);
         if(matcher.find() && matcher.groupCount() > 0) {
-            targetDirs.add(matcher.group(1));
+            extractedTargetDirs.add(matcher.group(1));
         }
-        return targetDirs;
+        return extractedTargetDirs;
     }
 }

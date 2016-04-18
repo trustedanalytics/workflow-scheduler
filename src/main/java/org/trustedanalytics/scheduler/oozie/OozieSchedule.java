@@ -28,8 +28,6 @@ import org.slf4j.LoggerFactory;
 @Data
 public class OozieSchedule {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(OozieSchedule.class);
-
     protected ZoneId zone;
 
     protected OozieFrequency frequency;

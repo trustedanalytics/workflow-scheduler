@@ -49,6 +49,8 @@ import java.util.stream.Collectors;
 public class OozieClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OozieClient.class);
+    private static final String JOBS_URL = "/oozie/v1/jobs";
+    private static final String SINGLE_JOB_URL = "/oozie/v1/job/";
 
     @Value("${oozie.api.url:host}")
     private String baseUrl;
@@ -113,6 +115,7 @@ public class OozieClient {
             date = formatter.parse(inputDate.substring(0, inputDate.lastIndexOf(' ')));
         } catch (ParseException e) {
             LOGGER.error(e.toString());
+            throw new IllegalArgumentException("Could not parse date: " + inputDate);
         }
         String timezone = inputDate.substring(inputDate.lastIndexOf(' ') + 1);
 
@@ -135,13 +138,13 @@ public class OozieClient {
     }
 
     private <T> List<T> getJobs(int offset, int len, String jobType, ParameterizedTypeReference<Page<T>> responseType) {
-        return getForEntity(baseUrl + "/oozie/v1/jobs?jobtype=" + jobType + "&len=" + len + "&offset=" + offset, responseType)
+        return getForEntity(baseUrl + JOBS_URL + "?jobtype=" + jobType + "&len=" + len + "&offset=" + offset, responseType)
             .getEntries();
     }
 
     private <T> List<T> getJobs(String appName, String jobType, ParameterizedTypeReference<Page<T>> responseType) {
         final String name = OozieNameResolver.resolveWorkflowAppName(appName);
-        return getForEntity(baseUrl + "/oozie/v1/jobs?filter=name=" + name + "&len=20000&jobtype=" + jobType, responseType)
+        return getForEntity(baseUrl + JOBS_URL + "?filter=name=" + name + "&len=20000&jobtype=" + jobType, responseType)
             .getEntries();
     }
 
@@ -153,16 +156,16 @@ public class OozieClient {
         return submitJob(getRequestBody(tokenProvider.getUserId(), jobDefinitionDirectory, "oozie.coord.application.path"));
     }
 
-    public OozieJobId submitWorkflowJob(String jobDefinitionDirectory, String targetDir) {
+    public OozieJobId submitWorkflowJob(String jobDefinitionDirectory) {
         return submitJob(getRequestBody(tokenProvider.getUserId(), jobDefinitionDirectory, "oozie.wf.application.path"));
     }
 
     public OozieJobLogs getJobLogs(String jobId) {
-        return new OozieJobLogs(restTemplateFactory.getRestTemplate().getForEntity(baseUrl + "/oozie/v1/job/" + jobId + "?show=log", String.class).getBody());
+        return new OozieJobLogs(restTemplateFactory.getRestTemplate().getForEntity(baseUrl + SINGLE_JOB_URL + jobId + "?show=log", String.class).getBody());
     }
 
     private <T> T getJobDetails(String jobId, ParameterizedTypeReference<T> parameterizedTypeReference) {
-        return restTemplateFactory.getRestTemplate().exchange(baseUrl + "/oozie/v1/job/" + jobId, HttpMethod.GET, null, parameterizedTypeReference).getBody();
+        return restTemplateFactory.getRestTemplate().exchange(baseUrl + SINGLE_JOB_URL + jobId, HttpMethod.GET, null, parameterizedTypeReference).getBody();
     }
 
     public OozieWorkflowJobInformationExtended getWorkflowJobDetails(String jobId) {
@@ -174,7 +177,7 @@ public class OozieClient {
     }
 
     public void manageJob(String jobId, String action) {
-        restTemplateFactory.getRestTemplate().put(baseUrl + "/oozie/v1/job/" + jobId + "?action=" + action, null, String.class);
+        restTemplateFactory.getRestTemplate().put(baseUrl + SINGLE_JOB_URL + jobId + "?action=" + action, null, String.class);
     }
 
     public List<OozieWorkflowJobInformationExtended> getWorkflowJobOfCoordinator(int offset, int len, String jobId) {
@@ -189,7 +192,7 @@ public class OozieClient {
 
     public ResponseEntity<byte[]> getJobGraph(String jobId) {
 
-        ResponseEntity<byte[]> response = restTemplateFactory.getRestTemplate().getForEntity(baseUrl + "/oozie/v1/job/" + jobId + "?show=graph", byte[].class);
+        ResponseEntity<byte[]> response = restTemplateFactory.getRestTemplate().getForEntity(baseUrl + SINGLE_JOB_URL + jobId + "?show=graph", byte[].class);
 
         final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.IMAGE_PNG);
@@ -208,7 +211,7 @@ public class OozieClient {
         HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
 
 
-        return restTemplateFactory.getRestTemplate().postForEntity(baseUrl + "/oozie/v1/jobs", entity, OozieJobId.class, jobProperties).getBody();
+        return restTemplateFactory.getRestTemplate().postForEntity(baseUrl + JOBS_URL, entity, OozieJobId.class, jobProperties).getBody();
     }
 
     private String getRequestBody(String userName, String jobDefinitionDirectory, String jobType) {

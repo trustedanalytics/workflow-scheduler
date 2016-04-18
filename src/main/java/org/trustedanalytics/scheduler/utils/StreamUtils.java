@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 public class StreamUtils {
+    private StreamUtils() {}
 
     @WillClose
     public static void copy(InputStream input, OutputStream output) {

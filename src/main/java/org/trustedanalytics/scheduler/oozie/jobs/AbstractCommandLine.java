@@ -67,12 +67,9 @@ public abstract class AbstractCommandLine implements CommandLine {
     }
 
     protected void optionalStringArgument(String key, String value, Boolean isEnabled) {
-        if((isEnabled != null) && isEnabled) {
-            if ((key != null) && (value != null)) {
-                arguments.put(key, value);
-            }
+        if((isEnabled != null) && isEnabled && (key != null) && (value != null)) {
+            arguments.put(key, value);
         }
-
     }
 
     protected void optionalArgument(String flag, Boolean isPresent) {

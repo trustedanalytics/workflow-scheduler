@@ -75,12 +75,12 @@ public class RestOperationsFactory {
                 return new KerberosRestTemplate("", jwtToken.getUserId(), options);
             } catch (LoginException e) {
                 LOGGER.error("Kerberos login exception", e);
+                throw new IllegalStateException("Unable to authenticate in kerberos");
             }
         } else {
             LOGGER.warn("No valid Kerberos configuration detected, creating standard RestTemplate");
             return new RestTemplate();
         }
-        return null;
     }
 
 }

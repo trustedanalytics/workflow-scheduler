@@ -30,8 +30,6 @@ public class LocalFileSystemFactory implements FileSystemFactory {
     @Override
     public FileSystem getFileSystem(UUID org) throws IOException {
         Configuration configuration = new Configuration();
-
-        FileSystem fs = FileSystem.get(configuration);
-        return fs;
+        return FileSystem.get(configuration);
     }
 }

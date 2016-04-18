@@ -50,8 +50,6 @@ import io.swagger.annotations.ApiOperation;
 @RestController
 public class WorkflowSchedulerController {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowSchedulerController.class);
-
     private final OozieClient oozieClient;
     private final OozieService oozieService;
 
@@ -75,22 +73,14 @@ public class WorkflowSchedulerController {
         this.configurationProvider = configurationProvider;
     }
 
-//    @RequestMapping(value = "/rest/v1/oozie/schedule_job/workflow", method = RequestMethod.POST)
-//    public OozieJobId scheduleOozieWorkflowJob(@RequestParam(value="org") Optional<UUID> org,
-//                                           @RequestBody SqoopScheduledImportJob sqoopScheduledImportJob) throws IOException {
-//        OozieJobId jobId = oozieService.sqoopImportJob(sqoopScheduledImportJob, org.get());
-//        oozieJobRepository.save(new OozieJobEntity(jobId.getId(), org.get().toString()));
-//        return jobId;
-//    }
-
     @ApiOperation(
             value = "Schedule coordinated job",
             notes = "Privilege level: Consumer of this endpoint must be a member of specified organization"
     )
     @RequestMapping(value = "/rest/v1/oozie/schedule_job/coordinated", method = RequestMethod.POST)
-    public OozieJobId scheduleOozieCoordinatedJob(@RequestParam(value="org") Optional<UUID> org,
-                                              @RequestBody SqoopScheduledImportJob sqoopScheduledImportJob) throws IOException {
-
+    public OozieJobId scheduleOozieCoordinatedJob(
+            @RequestParam(value="org") Optional<UUID> org,
+            @RequestBody SqoopScheduledImportJob sqoopScheduledImportJob) throws IOException {
         OozieJobId jobId = oozieService.sqoopScheduledImportJob(sqoopScheduledImportJob, org.get());
         oozieJobRepository.save(new OozieJobEntity(jobId.getId(), org.get().toString()));
         return jobId;
@@ -102,9 +92,9 @@ public class WorkflowSchedulerController {
     )
     @RequestMapping(value = "/rest/v1/oozie/jobs/coordinated", method = RequestMethod.GET)
     public List<OozieCoordinatedJobInformation> getOozieCoordinatedJobsInformation(
-        @RequestParam(value = "org") UUID org,
-        @RequestParam(value = "unit") Optional<String> unit,
-        @RequestParam(value = "amount") Optional<Integer> amount) {
+            @RequestParam(value = "org") UUID org,
+            @RequestParam(value = "unit") Optional<String> unit,
+            @RequestParam(value = "amount") Optional<Integer> amount) {
         final String timeUnit = unit.orElse("days");
         final int timeAmount = amount.orElse(1);
 
@@ -117,9 +107,9 @@ public class WorkflowSchedulerController {
     )
     @RequestMapping(value = "/rest/v1/oozie/jobs/workflow", method = RequestMethod.GET)
     public List<OozieWorkflowJobInformationExtended> getOozieWorkflowJobsInformation(
-        @RequestParam(value = "org") UUID org,
-        @RequestParam(value = "unit") Optional<String> unit,
-        @RequestParam(value = "amount") Optional<Integer> amount) {
+            @RequestParam(value = "org") UUID org,
+            @RequestParam(value = "unit") Optional<String> unit,
+            @RequestParam(value = "amount") Optional<Integer> amount) {
         final String timeUnit = unit.orElse("days");
         final int timeAmount = amount.orElse(1);
 
@@ -131,8 +121,7 @@ public class WorkflowSchedulerController {
             notes = "Privilege level: Consumer of this endpoint must be a member of specified organization"
     )
     @RequestMapping(value = "/rest/v1/oozie/jobs/{jobId}/logs", method = RequestMethod.GET)
-    public OozieJobLogs getJobLog(@PathVariable("jobId") String jobId,
-        @RequestParam(value = "org") Optional<UUID> org) {
+    public OozieJobLogs getJobLog(@PathVariable("jobId") String jobId) {
         return oozieClient.getJobLogs(jobId);
     }
 
@@ -141,8 +130,7 @@ public class WorkflowSchedulerController {
             notes = "Privilege level: Consumer of this endpoint must be a member of specified organization"
     )
     @RequestMapping(value = "/rest/v1/oozie/jobs/workflow/{jobId}", method = RequestMethod.GET)
-    public OozieWorkflowJobInformationExtended getWorkflowJobDetails(
-        @PathVariable("jobId") String jobId, @RequestParam Optional<UUID> org) {
+    public OozieWorkflowJobInformationExtended getWorkflowJobDetails(@PathVariable("jobId") String jobId) {
         return oozieClient.getWorkflowJobDetails(jobId);
     }
 
@@ -151,8 +139,7 @@ public class WorkflowSchedulerController {
             notes = "Privilege level: Consumer of this endpoint must be a member of specified organization"
     )
     @RequestMapping(value = "/rest/v1/oozie/jobs/coordinated/{jobId}", method = RequestMethod.GET)
-    public OozieCoordinatedJobInformation getCoordinatedJobDetails(
-        @PathVariable("jobId") String jobId, @RequestParam(value = "org") Optional<UUID> org) {
+    public OozieCoordinatedJobInformation getCoordinatedJobDetails(@PathVariable("jobId") String jobId) {
         return oozieClient.getCoordinatedJobDetails(jobId);
     }
 
@@ -161,8 +148,7 @@ public class WorkflowSchedulerController {
             notes = "Privilege level: Consumer of this endpoint must be a member of specified organization"
     )
     @RequestMapping(value = "/rest/v1/oozie/jobs/{jobId}/graph", method = RequestMethod.GET)
-    public ResponseEntity<byte[]> getJobGraph(@PathVariable("jobId") String jobId,
-        @RequestParam Optional<UUID> org) {
+    public ResponseEntity<byte[]> getJobGraph(@PathVariable("jobId") String jobId) {
         return oozieClient.getJobGraph(jobId);
     }
 
@@ -172,9 +158,9 @@ public class WorkflowSchedulerController {
     )
     @RequestMapping(value = "/rest/v1/oozie/jobs/coordinated/{jobId}/submitted", method = RequestMethod.GET)
     public List<OozieWorkflowJobInformationExtended> getWorkflowJobOfCoorinator(
-        @PathVariable("jobId") String jobId, @RequestParam Optional<UUID> org,
-        @RequestParam(value = "page") Optional<Integer> page,
-        @RequestParam(value = "len") Optional<Integer> len) {
+            @PathVariable("jobId") String jobId,
+            @RequestParam(value = "page") Optional<Integer> page,
+            @RequestParam(value = "len") Optional<Integer> len) {
         final int offset = page.orElse(1);
         final int totalResults = len.orElse(50);
 
@@ -186,9 +172,9 @@ public class WorkflowSchedulerController {
             notes = "Privilege level: Consumer of this endpoint must be a member of specified organization"
     )
     @RequestMapping(value = "/rest/v1/oozie/jobs/{jobId}/manage", method = RequestMethod.PUT)
-    public void manageJob(@PathVariable("jobId") String jobId,
-        @RequestParam(value = "org") Optional<UUID> org,
-        @RequestParam(value = "action", required = true) String action) {
+    public void manageJob(
+            @PathVariable("jobId") String jobId,
+            @RequestParam(value = "action", required = true) String action) {
         oozieClient.manageJob(jobId, action);
     }
 

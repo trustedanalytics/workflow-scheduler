@@ -15,16 +15,18 @@
  */
 package org.trustedanalytics.scheduler;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cloud.security.oauth2.resource.EnableOAuth2Resource;
-import org.trustedanalytics.utils.errorhandling.EnableRestErrorHandling;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.trustedanalytics.utils.errorhandling.RestErrorHandler;
 
-@SpringBootApplication
-@EnableOAuth2Resource
-@EnableRestErrorHandling
-public class WorkflowSchedulerApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(WorkflowSchedulerApplication.class, args);
+import javax.servlet.http.HttpServletResponse;
+
+@ControllerAdvice
+public class WorkflowSchedulerExceptionHandler {
+
+    @ExceptionHandler(Exception.class)
+    public void handleException(Exception e, HttpServletResponse response) throws Exception {
+        RestErrorHandler defaultErrorHandler = new RestErrorHandler();
+        defaultErrorHandler.handleException(e, response);
     }
 }

@@ -55,30 +55,13 @@ public class RepositoryConfig {
     @Bean
     @Profile("cloud")
     public DataSource cloudDataSource() {
-
         LOGGER.info("Creating postgresql data source");
-        /*
-        spring.jpa.database: POSTGRESQL
-        spring.datasource: platform=postgres
-        spring.jpa.show-sql: true
-        spring.jpa.hibernate.ddl-auto: create-drop
-        spring.database.driverClassName: org.postgresql.Driver
-        spring.datasource.url: jdbc:postgresql://${vcap.services.workflow-scheduler-db.credentials.hostname}:${vcap.services.workflow-scheduler-db.credentials.port}/${vcap.services.workflow-scheduler-db.credentials.dbname}
-        spring.datasource.username: ${vcap.services.workflow-scheduler-db.username}
-        spring.datasource.password: ${vcap.services.workflow-scheduler-db.credentials.password}
-        */
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
         dataSource.setDriverClassName(env.getProperty("spring.database.driverClassName"));
         dataSource.setUrl(env.getProperty("spring.datasource.url"));
         dataSource.setUsername(env.getProperty("spring.datasource.username"));
         dataSource.setPassword(env.getProperty("spring.datasource.password"));
-        /*
-        Properties connectionProperties = new Properties();
-        connectionProperties.put("")
-        dataSource.setConnectionProperties(connectionProperties);
-        */
         return dataSource;
-
     }
 }
 

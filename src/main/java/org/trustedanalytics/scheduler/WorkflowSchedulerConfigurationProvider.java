@@ -15,7 +15,6 @@
  */
 package org.trustedanalytics.scheduler;
 
-import org.trustedanalytics.scheduler.client.OozieClient;
 import org.trustedanalytics.scheduler.config.Database;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +32,8 @@ import rx.Observable;
 @Service
 public class WorkflowSchedulerConfigurationProvider {
 
+    private static final String MAIN_TIMEZONES = ".*(GMT|UTC|US|Europe/Warsaw).*";
+
     private final List<Database> databases;
 
     private final List<String> zones;
@@ -42,12 +43,9 @@ public class WorkflowSchedulerConfigurationProvider {
     @Autowired
     public WorkflowSchedulerConfigurationProvider(Observable<Database> databases, TokenProvider tokenProvider) {
         this.databases = databases.toList().toBlocking().single();
-        this.zones = Arrays.stream(TimeZone.getAvailableIDs()).filter(timezone -> timezone.contains("GMT+")
-                || timezone.contains("GMT-")
-                || timezone.contains("GMT")
-                || timezone.contains("UTC")
-                || timezone.contains("US")
-                || timezone.contains("Europe/Warsaw")).collect(Collectors.toList());
+        this.zones = Arrays.stream(TimeZone.getAvailableIDs())
+                .filter(timezone -> timezone.matches(MAIN_TIMEZONES))
+                .collect(Collectors.toList());
         this.tokenProvider = tokenProvider;
     }
 

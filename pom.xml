@@ -77,6 +77,11 @@
         </dependency>
         <!-- Utils -->
         <dependency>
+            <groupId>org.trustedanalytics</groupId>
+            <artifactId>rest-error-handling</artifactId>
+            <version>0.0.6</version>
+        </dependency>
+        <dependency>
             <groupId>io.reactivex</groupId>
             <artifactId>rxjava</artifactId>
             <version>1.1.0</version>
