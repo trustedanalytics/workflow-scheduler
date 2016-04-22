@@ -1,7 +1,7 @@
 ---
 applications:
 - name: workflow-scheduler
-  memory: 512M
+  memory: 1024M
   instances: 1
   host: workflow-scheduler
   path: target/workflow-scheduler-${version}.jar
