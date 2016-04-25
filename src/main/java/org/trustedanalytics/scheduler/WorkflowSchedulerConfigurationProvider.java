@@ -27,6 +27,7 @@ import java.util.TimeZone;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.trustedanalytics.scheduler.security.TokenProvider;
 import rx.Observable;
 
 @Service
@@ -36,8 +37,10 @@ public class WorkflowSchedulerConfigurationProvider {
 
     private final List<String> zones;
 
+    private final TokenProvider tokenProvider;
+
     @Autowired
-    public WorkflowSchedulerConfigurationProvider(Observable<Database> databases, OozieClient oozieClient) {
+    public WorkflowSchedulerConfigurationProvider(Observable<Database> databases, TokenProvider tokenProvider) {
         this.databases = databases.toList().toBlocking().single();
         this.zones = Arrays.stream(TimeZone.getAvailableIDs()).filter(timezone -> timezone.contains("GMT+")
                 || timezone.contains("GMT-")
@@ -45,6 +48,7 @@ public class WorkflowSchedulerConfigurationProvider {
                 || timezone.contains("UTC")
                 || timezone.contains("US")
                 || timezone.contains("Europe/Warsaw")).collect(Collectors.toList());
+        this.tokenProvider = tokenProvider;
     }
 
     public WorkflowSchedulerConfigurationEntity getConfiguration(UUID orgId) {
@@ -52,7 +56,7 @@ public class WorkflowSchedulerConfigurationProvider {
             .databases(databases)
             .timezones(zones)
             .organizationDirectory(
-                String.format("hdfs://nameservice1/org/%s/", orgId))
+                String.format("hdfs://nameservice1/org/%s/user/%s/", orgId, tokenProvider.getUserId()))
             .build();
     }
 }
