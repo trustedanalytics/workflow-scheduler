@@ -17,6 +17,7 @@ package org.trustedanalytics.scheduler.filesystem;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.trustedanalytics.scheduler.security.TokenProvider;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -26,17 +27,19 @@ import java.util.UUID;
 public class HdfsOrgSpecificSpaceFactory implements OrgSpecificSpaceFactory {
 
     private final FileSystemFactory fileSystemFactory;
+    private final TokenProvider tokenProvider;
 
     @Autowired
-    public HdfsOrgSpecificSpaceFactory(FileSystemFactory fileSystemFactory) {
+    public HdfsOrgSpecificSpaceFactory(FileSystemFactory fileSystemFactory, TokenProvider tokenProvider) {
         this.fileSystemFactory = fileSystemFactory;
+        this.tokenProvider = tokenProvider;
     }
 
     @Override
     public OrgSpecificSpace getOrgSpecificSpace(UUID orgID) throws IOException {
 
         Objects.requireNonNull(orgID, "Organization identifier is required");
-        return new HdfsOrgSpecificSpace(fileSystemFactory.getFileSystem(orgID), orgID);
+        return new HdfsOrgSpecificSpace(fileSystemFactory.getFileSystem(orgID), orgID, tokenProvider);
     }
 }
 

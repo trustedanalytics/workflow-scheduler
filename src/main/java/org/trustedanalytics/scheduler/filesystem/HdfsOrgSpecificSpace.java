@@ -20,6 +20,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.trustedanalytics.scheduler.security.OauthTokenProvider;
+import org.trustedanalytics.scheduler.security.TokenProvider;
 import org.trustedanalytics.scheduler.utils.StreamUtils;
 
 import java.io.IOException;
@@ -36,14 +38,16 @@ public class HdfsOrgSpecificSpace implements OrgSpecificSpace {
     private final FileSystem fileSystem;
     private final Path root;
     private final Supplier<String> random;
+    private final TokenProvider tokenProvider;
 
-    public HdfsOrgSpecificSpace(FileSystem fileSystem, UUID orgId) {
+    public HdfsOrgSpecificSpace(FileSystem fileSystem, UUID orgId, TokenProvider tokenProvider) {
         Objects.requireNonNull(fileSystem);
         Objects.requireNonNull(orgId);
 
         this.fileSystem = fileSystem;
         this.root = new Path(String.format("hdfs://nameservice1/org/%s/", orgId));
         this.random = () -> UUID.randomUUID().toString();
+        this.tokenProvider = tokenProvider;
     }
 
     @Override
@@ -62,10 +66,11 @@ public class HdfsOrgSpecificSpace implements OrgSpecificSpace {
 
     @Override
     public Path resolveSqoopTargetDir(String jobName, String targetDir) {
+
         if(StringUtils.isEmpty(targetDir)) {
             return resolveDir("sqoop-imports", jobName, random.get());
         } else {
-            return resolveDir(targetDir);
+            return resolveDir("user", tokenProvider.getUserId(), targetDir);
         }
     }
 
