@@ -5,7 +5,7 @@
     <groupId>org.trustedanalytics</groupId>
     <artifactId>workflow-scheduler</artifactId>
     <packaging>jar</packaging>
-    <version>0.4.6</version>
+    <version>0.4.7</version>
 
     <parent>
         <groupId>org.trustedanalytics</groupId>
@@ -55,7 +55,7 @@
         <dependency>
             <groupId>org.trustedanalytics</groupId>
             <artifactId>hadoop-utils</artifactId>
-            <version>0.5.12</version>
+            <version>0.6.8</version>
             <exclusions>
                 <exclusion>
                     <groupId>javax.servlet</groupId>
