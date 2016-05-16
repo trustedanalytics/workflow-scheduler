@@ -29,8 +29,6 @@ import org.trustedanalytics.scheduler.persistence.repository.OozieJobRepository;
 import org.trustedanalytics.scheduler.oozie.OozieService;
 import org.trustedanalytics.scheduler.oozie.jobs.sqoop.SqoopScheduledImportJob;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -52,13 +50,9 @@ public class WorkflowSchedulerController {
 
     private final OozieClient oozieClient;
     private final OozieService oozieService;
-
     private final OozieJobFilter oozieJobFilter;
-
     private final OozieJobRepository oozieJobRepository;
     private final WorkflowSchedulerConfigurationProvider configurationProvider;
-
-
 
     @Autowired
     public WorkflowSchedulerController(OozieClient oozieClient,

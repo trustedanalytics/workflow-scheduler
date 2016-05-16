@@ -39,16 +39,14 @@ import java.util.Map;
 @Component
 public class RestOperationsFactory {
 
+    private static final String KRB5_CREDENTIALS_CACHE_DIR = "/tmp/";
     private static final Logger LOGGER = LoggerFactory.getLogger(RestOperationsFactory.class);
-
     private HdfsConfigProvider hdfsConfigProvider;
 
     @Autowired
     public RestOperationsFactory(HdfsConfigProvider configProvider) throws IOException {
         hdfsConfigProvider = configProvider;
     }
-
-    private static final String KRB5_CREDENTIALS_CACHE_DIR = "/tmp/";
 
     static String ticketCacheLocation(String princName) {
         return KRB5_CREDENTIALS_CACHE_DIR
@@ -82,5 +80,4 @@ public class RestOperationsFactory {
             return new RestTemplate();
         }
     }
-
 }

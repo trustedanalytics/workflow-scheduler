@@ -20,7 +20,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.trustedanalytics.scheduler.security.OauthTokenProvider;
 import org.trustedanalytics.scheduler.security.TokenProvider;
 import org.trustedanalytics.scheduler.utils.StreamUtils;
 
