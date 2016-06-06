@@ -17,14 +17,32 @@ package org.trustedanalytics.scheduler;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.orm.jpa.JpaBaseConfiguration;
 import org.springframework.cloud.security.oauth2.resource.EnableOAuth2Resource;
+import org.springframework.orm.jpa.vendor.AbstractJpaVendorAdapter;
+import org.springframework.orm.jpa.vendor.EclipseLinkJpaVendorAdapter;
 import org.trustedanalytics.utils.errorhandling.EnableRestErrorHandling;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @SpringBootApplication
 @EnableOAuth2Resource
 @EnableRestErrorHandling
-public class WorkflowSchedulerApplication {
+public class WorkflowSchedulerApplication extends JpaBaseConfiguration {
     public static void main(String[] args) {
         SpringApplication.run(WorkflowSchedulerApplication.class, args);
+    }
+
+    @Override
+    protected AbstractJpaVendorAdapter createJpaVendorAdapter() {
+        return new EclipseLinkJpaVendorAdapter();
+    }
+
+    @Override
+    protected Map<String, Object> getVendorProperties() {
+        final Map<String, Object> ret = new HashMap<>();
+        ret.put("eclipselink.weaving", "false");
+        return ret;
     }
 }

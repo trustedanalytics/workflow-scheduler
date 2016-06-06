@@ -22,16 +22,18 @@ import lombok.NoArgsConstructor;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.Table;
 
 @Data
+@Table(name = "oozie_job_entity")
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
 public class OozieJobEntity {
     @Id
-    @Column(name = "jobId", nullable = false)
+    @Column(name = "job_id", nullable = false)
     protected String jobId;
 
-    @Column(name = "orgId", nullable = false)
+    @Column(name = "org_id", nullable = false)
     protected String orgId;
 }
