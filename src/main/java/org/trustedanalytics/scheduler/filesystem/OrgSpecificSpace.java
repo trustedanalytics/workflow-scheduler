@@ -30,4 +30,6 @@ public interface OrgSpecificSpace {
     Path resolveOozieDir(String jobName, String appPath);
 
     String getNameNode();
+
+    void createFile(Path path, InputStream in);
 }

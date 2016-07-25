@@ -15,15 +15,10 @@
  */
 package org.trustedanalytics.scheduler.config;
 
-import java.util.Collection;
-
 import lombok.Data;
 
 @Data
-public class Database {
-
-    protected String name;
-    protected Collection<JDBCDriver> drivers;
-    protected Schema schema;
-
+public class Schema {
+    protected Boolean supported;
+    protected Boolean required;
 }

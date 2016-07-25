@@ -13,17 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.trustedanalytics.scheduler.config;
+package org.trustedanalytics.scheduler.oozie.serialization;
 
-import java.util.Collection;
+@FunctionalInterface
+public interface BuilderNode {
 
-import lombok.Data;
-
-@Data
-public class Database {
-
-    protected String name;
-    protected Collection<JDBCDriver> drivers;
-    protected Schema schema;
-
+    XmlNode build();
 }

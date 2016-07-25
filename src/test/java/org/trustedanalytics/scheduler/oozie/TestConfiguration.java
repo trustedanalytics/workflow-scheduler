@@ -15,43 +15,62 @@
  */
 package org.trustedanalytics.scheduler.oozie;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.simpleframework.xml.Serializer;
-import org.simpleframework.xml.core.Persister;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.config.PropertyPlaceholderConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.trustedanalytics.scheduler.OozieJobMapper;
-import org.trustedanalytics.scheduler.OozieJobTimeValidator;
-import org.trustedanalytics.scheduler.OozieJobValidator;
+import org.springframework.mock.env.MockEnvironment;
+import org.trustedanalytics.scheduler.*;
 import org.trustedanalytics.scheduler.client.OozieClient;
-import org.trustedanalytics.scheduler.filesystem.LocalHdfsConfigProvider;
-import org.trustedanalytics.scheduler.util.ConstantJobIdSupplier;
-import org.trustedanalytics.scheduler.util.InMemoryOrgSpecificSpaceFactory;
-import org.trustedanalytics.scheduler.util.MockRestOperationsFactory;
-import org.trustedanalytics.scheduler.util.MockTokenProvider;
+import org.trustedanalytics.scheduler.oozie.jobs.sqoop.SqoopJobMapper;
+import org.trustedanalytics.scheduler.oozie.serialization.JobContext;
+import org.trustedanalytics.scheduler.utils.*;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Properties;
 
 @Configuration
 public class TestConfiguration {
+    private static final Logger LOGGER = LoggerFactory.getLogger(TestConfiguration.class);
+
+    public static final String TEST_JOB_TRACKER = "test_job_tracker";
+    public static final String TEST_NAMENODE = "test_namenode";
+    public static final String TEST_METASTORE_URL = "test_metastore_url:32158";
+    public static final String OOZIE_API_URL = "oozie_api_url";
+    public static final String TEST_HADOOP_HOME = "test_hadoop_home";
 
     /*
      *  create sqoop.metastore property for unit test
      *
      */
 
+    private JobContext jobContext;
+
+    public TestConfiguration() {
+        jobContext = JobContext.builder().jobTracker(TEST_JOB_TRACKER)
+                                        .nameNode(TEST_NAMENODE)
+                                        .sqoopMetastore(TEST_METASTORE_URL)
+                                        .oozieApiUrl(OOZIE_API_URL).build();
+    }
+
     @Bean
     public static PropertyPlaceholderConfigurer propertyPlaceholderConfigurer() {
         PropertyPlaceholderConfigurer ppc = new PropertyPlaceholderConfigurer();
         ppc.setIgnoreResourceNotFound(true);
         final Properties properties = new Properties();
-        properties.setProperty("sqoop.metastore", "test_metastore_url:32158");
-        properties.setProperty("hadoop.home", "test_hadoop_home");
-        properties.setProperty("job.tracker", "test_job_tracker");
-        properties.setProperty("oozie.api.url", "oozie_api_url");
+        properties.setProperty("sqoop.metastore", TEST_METASTORE_URL);
+        properties.setProperty("hadoop.home", TEST_HADOOP_HOME);
+        properties.setProperty("job.tracker", TEST_JOB_TRACKER);
+        properties.setProperty("oozie.api.url", OOZIE_API_URL);
         ppc.setProperties(properties);
         return ppc;
     }
@@ -59,26 +78,43 @@ public class TestConfiguration {
     @Mock
     private OozieClient oozieClient;
 
-    private Serializer serializer = new Persister();
-
     @Bean
     public OozieService getOozieService() {
 
         oozieClient = Mockito.mock(OozieClient.class);
         return new OozieService(new InMemoryOrgSpecificSpaceFactory(),
                 oozieClient,
-                serializer,
                 new ConstantJobIdSupplier(),
-                new OozieJobValidator(new OozieJobTimeValidator()),
-                new OozieJobMapper()
+                new SqoopJobMapper(databaseProvider()),
+                jobContext
                 );
     }
 
     @Bean
     public OozieClient getOozieClient() throws IOException {
-        return new OozieClient(new MockRestOperationsFactory(), new LocalHdfsConfigProvider(), new MockTokenProvider());
+        return new OozieClient(new MockRestOperationsFactory(), new MockTokenProvider(), jobContext);
     }
 
+    @Bean
+    public ObjectMapper objectMapper() {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
+        final SimpleModule simpleModule = new SimpleModule();
+        simpleModule.addDeserializer(ZoneId.class, new ZoneIdDeserializer());
+        simpleModule.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer());
+
+        objectMapper.registerModules(new Jdk8Module(), simpleModule);
+
+        return objectMapper;
+    }
+
+    @Bean
+    public DatabaseProvider databaseProvider() {
+        MockEnvironment mockEnv = new MockEnvironment();
+        mockEnv.setProperty("sqoop.database.postgresql","true");
+        LOGGER.info("postgres enabled");
+        return new DatabaseProvider(mockEnv, objectMapper());
+    }
 }
 

@@ -13,17 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.trustedanalytics.scheduler.config;
+package org.trustedanalytics.scheduler.utils;
 
-import java.util.Collection;
+import org.trustedanalytics.scheduler.filesystem.OrgSpecificSpace;
+import org.trustedanalytics.scheduler.filesystem.OrgSpecificSpaceFactory;
 
-import lombok.Data;
+import java.io.IOException;
+import java.util.Objects;
+import java.util.UUID;
 
-@Data
-public class Database {
+public class InMemoryOrgSpecificSpaceFactory implements OrgSpecificSpaceFactory {
 
-    protected String name;
-    protected Collection<JDBCDriver> drivers;
-    protected Schema schema;
+    @Override
+    public OrgSpecificSpace getOrgSpecificSpace(UUID orgID) throws IOException {
 
+        Objects.requireNonNull(orgID, "Organization identifier is required");
+        return new InMemoryOrgSpecificSpace();
+    }
 }

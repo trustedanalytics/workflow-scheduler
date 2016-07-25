@@ -48,12 +48,6 @@ public class OozieSchedule {
         return endTimeUtc.toString() + "Z";
     }
 
-    public String coordinatorFrequency() {
-        // @formatter:off
-        return String.format("${coord:%s(%s)}", frequency.unit, frequency.amount);
-        // @formatter:on
-    }
-
     public String coordinatorZone() {
         return zone.toString();
     }

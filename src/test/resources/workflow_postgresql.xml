@@ -17,7 +17,7 @@
                     <value>1981838e-bcc9-4402-95eb-60c7f3ca6fbc</value>
                 </property>
             </configuration>
-            <command>job --create 00000000-0000-0000-0000-000000000007 --meta-connect test_metastore_url:32158 -- import --connect FAKE_JDBC_URI --table table_in_database --num-mappers 1 --target-dir ${targetDir} --append --connection-param-file driver.properties</command>
+            <command>job --create 00000000-0000-0000-0000-000000000007 --meta-connect test_metastore_url:32158 -- import --connect jdbc:postgresql --table table_in_database --num-mappers 1 --target-dir ${targetDir} --append --connection-param-file driver.properties --driver org.postgresql.Driver</command>
             <file>driver.properties</file>
         </sqoop>
         <ok to="test-flag"/>

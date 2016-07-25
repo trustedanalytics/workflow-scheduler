@@ -29,7 +29,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
 import org.trustedanalytics.scheduler.filesystem.HdfsConfigProvider;
+import org.trustedanalytics.scheduler.oozie.serialization.JobContext;
 import org.trustedanalytics.scheduler.rest.RestOperationsFactory;
 import org.trustedanalytics.scheduler.security.TokenProvider;
 import org.trustedanalytics.scheduler.utils.OozieNameResolver;
@@ -46,28 +48,24 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+@Component
 public class OozieClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OozieClient.class);
     private static final String JOBS_URL = "/oozie/v1/jobs";
     private static final String SINGLE_JOB_URL = "/oozie/v1/job/";
 
-    @Value("${oozie.api.url:host}")
-    private String baseUrl;
-
-    @Value("${job.tracker}")
-    private String jobTracker;
-
-    private final String nameNode;
 
     private RestOperationsFactory restTemplateFactory;
     private TokenProvider tokenProvider;
 
+    private JobContext jobContext;
+
     @Autowired
-    public OozieClient(RestOperationsFactory restOperationsFactory, HdfsConfigProvider configProvider, TokenProvider tokenProvider) {
+    public OozieClient(RestOperationsFactory restOperationsFactory, TokenProvider tokenProvider, JobContext jobContext) {
         this.restTemplateFactory = restOperationsFactory;
         this.tokenProvider = tokenProvider;
-        nameNode = configProvider.getHdfsUri();
+        this.jobContext = jobContext;
     }
 
     public List<OozieWorkflowJobInformationExtended> getWorkflowJobs(String unit, int amount) {
@@ -82,7 +80,7 @@ public class OozieClient {
                 getJobs(offset, len, "wf", new ParameterizedTypeReference<Page<OozieWorkflowJobInformation>>() {})
                     .stream()
                     .filter(job -> getDate(job.getCreatedTime()).isAfter(searchedTime))
-                    .map(job -> new OozieWorkflowJobInformationExtended(job, nameNode))
+                    .map(job -> new OozieWorkflowJobInformationExtended(job, jobContext.getNameNode()))
                     .collect(Collectors.toList()));
             offset += len;
         } while(oozieWorkflowJobsInformationExtended.size() == offset);
@@ -138,13 +136,13 @@ public class OozieClient {
     }
 
     private <T> List<T> getJobs(int offset, int len, String jobType, ParameterizedTypeReference<Page<T>> responseType) {
-        return getForEntity(baseUrl + JOBS_URL + "?jobtype=" + jobType + "&len=" + len + "&offset=" + offset, responseType)
+        return getForEntity(jobContext.getOozieApiUrl() + JOBS_URL + "?jobtype=" + jobType + "&len=" + len + "&offset=" + offset, responseType)
             .getEntries();
     }
 
     private <T> List<T> getJobs(String appName, String jobType, ParameterizedTypeReference<Page<T>> responseType) {
         final String name = OozieNameResolver.resolveWorkflowAppName(appName);
-        return getForEntity(baseUrl + JOBS_URL + "?filter=name=" + name + "&len=20000&jobtype=" + jobType, responseType)
+        return getForEntity(jobContext.getOozieApiUrl() + JOBS_URL + "?filter=name=" + name + "&len=20000&jobtype=" + jobType, responseType)
             .getEntries();
     }
 
@@ -161,15 +159,15 @@ public class OozieClient {
     }
 
     public OozieJobLogs getJobLogs(String jobId) {
-        return new OozieJobLogs(restTemplateFactory.getRestTemplate().getForEntity(baseUrl + SINGLE_JOB_URL + jobId + "?show=log", String.class).getBody());
+        return new OozieJobLogs(restTemplateFactory.getRestTemplate().getForEntity(jobContext.getOozieApiUrl() + SINGLE_JOB_URL + jobId + "?show=log", String.class).getBody());
     }
 
     private <T> T getJobDetails(String jobId, ParameterizedTypeReference<T> parameterizedTypeReference) {
-        return restTemplateFactory.getRestTemplate().exchange(baseUrl + SINGLE_JOB_URL + jobId, HttpMethod.GET, null, parameterizedTypeReference).getBody();
+        return restTemplateFactory.getRestTemplate().exchange(jobContext.getOozieApiUrl() + SINGLE_JOB_URL + jobId, HttpMethod.GET, null, parameterizedTypeReference).getBody();
     }
 
     public OozieWorkflowJobInformationExtended getWorkflowJobDetails(String jobId) {
-        return new OozieWorkflowJobInformationExtended(getJobDetails(jobId, new ParameterizedTypeReference<OozieWorkflowJobInformation>() {}), nameNode);
+        return new OozieWorkflowJobInformationExtended(getJobDetails(jobId, new ParameterizedTypeReference<OozieWorkflowJobInformation>() {}), jobContext.getNameNode());
     }
 
     public OozieCoordinatedJobInformation getCoordinatedJobDetails(String jobId) {
@@ -177,14 +175,14 @@ public class OozieClient {
     }
 
     public void manageJob(String jobId, String action) {
-        restTemplateFactory.getRestTemplate().put(baseUrl + SINGLE_JOB_URL + jobId + "?action=" + action, null, String.class);
+        restTemplateFactory.getRestTemplate().put(jobContext.getOozieApiUrl() + SINGLE_JOB_URL + jobId + "?action=" + action, null, String.class);
     }
 
     public List<OozieWorkflowJobInformationExtended> getWorkflowJobOfCoordinator(int offset, int len, String jobId) {
         return getJobs(getCoordinatedJobDetails(jobId).getCoordJobName(), "wf", new ParameterizedTypeReference<Page<OozieWorkflowJobInformation>>() {})
             .stream()
             .filter(job -> Objects.nonNull(job.getParentId()) && job.getParentId().contains(jobId))
-            .map(job -> new OozieWorkflowJobInformationExtended(job, nameNode))
+            .map(job -> new OozieWorkflowJobInformationExtended(job, jobContext.getNameNode()))
             .skip((offset - 1)*len)
             .limit(len)
             .collect(Collectors.toList());
@@ -192,7 +190,7 @@ public class OozieClient {
 
     public ResponseEntity<byte[]> getJobGraph(String jobId) {
 
-        ResponseEntity<byte[]> response = restTemplateFactory.getRestTemplate().getForEntity(baseUrl + SINGLE_JOB_URL + jobId + "?show=graph", byte[].class);
+        ResponseEntity<byte[]> response = restTemplateFactory.getRestTemplate().getForEntity(jobContext.getOozieApiUrl() + SINGLE_JOB_URL + jobId + "?show=graph", byte[].class);
 
         final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.IMAGE_PNG);
@@ -211,7 +209,7 @@ public class OozieClient {
         HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
 
 
-        return restTemplateFactory.getRestTemplate().postForEntity(baseUrl + JOBS_URL, entity, OozieJobId.class, jobProperties).getBody();
+        return restTemplateFactory.getRestTemplate().postForEntity(jobContext.getOozieApiUrl() + JOBS_URL, entity, OozieJobId.class, jobProperties).getBody();
     }
 
     private String getRequestBody(String userName, String jobDefinitionDirectory, String jobType) {
@@ -221,9 +219,9 @@ public class OozieClient {
                 property("user.name", userName) +
                 property(jobType, jobDefinitionDirectory) +
                 property("oozie.use.system.libpath", "true") +
-                property("nameNode", nameNode) +
+                property("nameNode", jobContext.getNameNode()) +
                 property("queueName", "default") +
-                property("jobTracker", jobTracker) +
+                property("jobTracker", jobContext.getJobTracker()) +
         "</configuration>";
     }
 

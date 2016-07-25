@@ -75,5 +75,4 @@ public class SqoopImport {
     private String importMode;
 
     private String schema;
-
 }

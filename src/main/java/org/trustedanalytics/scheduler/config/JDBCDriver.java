@@ -23,5 +23,7 @@ public class JDBCDriver {
     protected String name;
     protected String version;
     protected String className;
+    protected String jdbcRegex;
+    protected String jdbcTemplate;
 
 }

@@ -17,74 +17,64 @@ package org.trustedanalytics.scheduler.oozie.serialization;
 
 import com.jamesmurty.utils.XMLBuilder2;
 import org.trustedanalytics.scheduler.oozie.serialization.WorkflowInstance.WorkflowInstanceBuilder;
+
 import java.util.Objects;
 
-public class DecisionNode implements XmlNode {
+public class CreateFileNode implements XmlNode {
 
     private final String name;
+    private final String path;
     private final String then;
-    private final String orElse;
-    private final String condition;
 
-    private DecisionNode(WorkflowDecisionNodeBuilder builder) {
+    public CreateFileNode(WorkflowCreateFileBuilder builder) {
         this.name = Objects.requireNonNull(builder.name, "name");
+        this.path = Objects.requireNonNull(builder.path, "path");
         this.then = Objects.requireNonNull(builder.then, "then");
-        this.orElse = Objects.requireNonNull(builder.orElse, "orElse");
-        this.condition = Objects.requireNonNull(builder.condition, "condition");
     }
 
-    public static WorkflowDecisionNodeBuilder builder() {
-        return new WorkflowDecisionNodeBuilder();
+    public static WorkflowCreateFileBuilder builder() {
+        return new WorkflowCreateFileBuilder();
     }
 
     @Override
     public XMLBuilder2 asXmlBuilder() {
-        return XMLBuilder2.create("decision").a("name",name)
-                .e("switch")
-                .e("case").a("to", then).t(condition).up()
-                .e("default").a("to", orElse).up();
+        return XMLBuilder2.create("action").a("name",name).e("fs").e("touchz").a("path",path)
+                .up().up().e("ok").a("to", then).up().e("error").a("to","fail");
     }
 
-    public static class WorkflowDecisionNodeBuilder implements BuilderNode {
+    public static class WorkflowCreateFileBuilder implements BuilderNode {
 
         private WorkflowInstanceBuilder parent;
         private String name;
+        private String path;
         private String then;
-        private String orElse;
-        private String condition;
 
-        protected WorkflowDecisionNodeBuilder setParent(WorkflowInstanceBuilder parent) {
+        public CreateFileNode build() {
+            return new CreateFileNode(this);
+        }
+
+        protected WorkflowCreateFileBuilder setParent(WorkflowInstanceBuilder parent) {
             this.parent = parent;
             return this;
         }
 
-        public WorkflowDecisionNodeBuilder setName(String name) {
+        public WorkflowCreateFileBuilder setPath(String path) {
+            this.path = path;
+            return this;
+        }
+
+        public WorkflowCreateFileBuilder setName(String name) {
             this.name = name;
             return this;
         }
 
-        public WorkflowDecisionNodeBuilder then(String then) {
+        public WorkflowCreateFileBuilder then(String then) {
             this.then = then;
-            return this;
-        }
-
-        public WorkflowDecisionNodeBuilder orElse(String orElse) {
-            this.orElse = orElse;
-            return this;
-        }
-
-        protected WorkflowDecisionNodeBuilder setCondition(String condition) {
-            this.condition = condition;
             return this;
         }
 
         public WorkflowInstanceBuilder and() {
             return parent;
-        }
-
-        @Override
-        public DecisionNode build() {
-            return new DecisionNode(this);
         }
     }
 }

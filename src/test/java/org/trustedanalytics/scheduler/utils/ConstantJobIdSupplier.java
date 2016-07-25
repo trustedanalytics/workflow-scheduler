@@ -13,17 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.trustedanalytics.scheduler.config;
+package org.trustedanalytics.scheduler.utils;
 
-import java.util.Collection;
+import java.util.function.Supplier;
 
-import lombok.Data;
+public class ConstantJobIdSupplier implements Supplier<String> {
 
-@Data
-public class Database {
+    private static final String jobID = "00000000-0000-0000-0000-000000000007";
 
-    protected String name;
-    protected Collection<JDBCDriver> drivers;
-    protected Schema schema;
-
+    @Override
+    public String get() {
+        return jobID;
+    }
 }

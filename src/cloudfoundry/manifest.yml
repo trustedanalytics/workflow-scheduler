@@ -13,6 +13,10 @@ applications:
   env:
     SPRING_PROFILES_ACTIVE: "cloud"
     VERSION: ${version}
+    SQOOP_DATABASE_POSTGRESQL: true
+    SQOOP_DATABASE_ORACLE: false
+    SQOOP_DATABASE_MYSQL: false
+    SQOOP_DATABASE_TERADATA: false
     #JOB_TRACKER: example.com:8032
     #OOZIE_API_URL: http://example.com:11000
     #SQOOP_METASTORE: example.com:16000/sqoop

@@ -13,17 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.trustedanalytics.scheduler.config;
+package org.trustedanalytics.scheduler.utils;
 
-import java.util.Collection;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
+import org.trustedanalytics.scheduler.filesystem.LocalHdfsConfigProvider;
+import org.trustedanalytics.scheduler.rest.RestOperationsFactory;
 
-import lombok.Data;
+import java.io.IOException;
 
-@Data
-public class Database {
+@Component
+public class MockRestOperationsFactory extends RestOperationsFactory {
 
-    protected String name;
-    protected Collection<JDBCDriver> drivers;
-    protected Schema schema;
+    public MockRestOperationsFactory() throws IOException {
+        super(new LocalHdfsConfigProvider());
+    }
 
+    public RestTemplate getRestTemplate()  {
+        return new MockRestTemplate();
+    }
 }

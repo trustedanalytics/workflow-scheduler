@@ -1,10 +1,10 @@
 
-<workflow-app name="test-app" xmlns="uri:oozie:workflow:0.4">
+<workflow-app xmlns="uri:oozie:workflow:0.4" name="test-app">
     <start to="test-decision"/>
     <decision name="test-decision">
         <switch>
-            <case to="test-create">${fs:exists(&quot;oozieDirectory/sqoop-create&quot;) eq false}</case>
-            <default to="test-exec"/>
+            <case to="test-exec">${fs:exists("oozie-jobs/test/FAKE_GUID/sqoop-create") eq true}</case>
+            <default to="test-create"/>
         </switch>
     </decision>
     <action name="test-create">
@@ -18,14 +18,15 @@
                     <value>1981838e-bcc9-4402-95eb-60c7f3ca6fbc</value>
                 </property>
             </configuration>
-            <command>job --create 00000000-0000-0000-0000-000000000007 --meta-connect test_metastore_url:32158 -- import --connect FAKE_JDBC_URI --table table_in_database --num-mappers 1 --target-dir ${targetDir} --append</command>
+            <command>job --create 00000000-0000-0000-0000-000000000007 --meta-connect test_metastore_url:32158 -- import --connect FAKE_JDBC_URI --table table_in_database --num-mappers 1 --target-dir ${targetDir} --append --connection-param-file driver.properties</command>
+            <file>driver.properties</file>
         </sqoop>
         <ok to="test-flag"/>
         <error to="fail"/>
     </action>
     <action name="test-flag">
         <fs>
-            <touchz path="oozieDirectory/sqoop-create"/>
+            <touchz path="oozie-jobs/test/FAKE_GUID/sqoop-create"/>
         </fs>
         <ok to="test-exec"/>
         <error to="fail"/>

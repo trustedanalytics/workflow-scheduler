@@ -17,6 +17,7 @@ endpoints.health.enabled: true
 
 sqoop.metastore: jdbc:hsqldb:hsql://localhost:16000/sqoop
 
+oozie.schedule.frequency.minimum: 300
 
 ---
 
@@ -38,6 +39,8 @@ logging:
 
 flyway.initOnMigrate: true
 
+namenode: ${vcap.services.hdfs-instance.credentials.HADOOP_CONFIG_KEY.fs.defaultFS}
+
 endpoints.enabled: false
 endpoints.health.enabled: true
 spring.datasource.platform: cloud
@@ -49,3 +52,5 @@ spring.database.driverClassName: org.postgresql.Driver
 spring.datasource.url: jdbc:postgresql://${vcap.services.workflow-scheduler-db.credentials.hostname}:${vcap.services.workflow-scheduler-db.credentials.port}/${vcap.services.workflow-scheduler-db.credentials.dbname}
 spring.datasource.username: ${vcap.services.workflow-scheduler-db.username}
 spring.datasource.password: ${vcap.services.workflow-scheduler-db.credentials.password}
+
+oozie.schedule.frequency.minimum: 300

@@ -15,213 +15,125 @@
  */
 package org.trustedanalytics.scheduler.oozie;
 
-import org.trustedanalytics.scheduler.OozieJobMapper;
-import org.trustedanalytics.scheduler.OozieJobValidator;
+import org.trustedanalytics.scheduler.oozie.jobs.sqoop.SqoopJobMapper;
 import org.trustedanalytics.scheduler.client.OozieClient;
 import org.trustedanalytics.scheduler.client.OozieJobId;
 import org.trustedanalytics.scheduler.filesystem.OrgSpecificSpace;
 import org.trustedanalytics.scheduler.filesystem.OrgSpecificSpaceFactory;
 import org.trustedanalytics.scheduler.oozie.jobs.OozieScheduledJob;
-import org.trustedanalytics.scheduler.oozie.jobs.sqoop.SqoopImport;
 import org.trustedanalytics.scheduler.oozie.jobs.sqoop.SqoopJob;
 import org.trustedanalytics.scheduler.oozie.jobs.sqoop.SqoopScheduledImportJob;
-import org.trustedanalytics.scheduler.oozie.serialization.*;
 
-import com.google.common.collect.Lists;
-
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.Path;
-import org.simpleframework.xml.Serializer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.trustedanalytics.scheduler.utils.OozieNameResolver;
+import org.trustedanalytics.scheduler.oozie.serialization.CoordinatorInstance;
+import org.trustedanalytics.scheduler.oozie.serialization.JobContext;
+import org.trustedanalytics.scheduler.oozie.serialization.WorkflowInstance;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
 @Service
 public class OozieService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(OozieService.class);
     private static final String ERR_MSG = "Error message[${wf:errorMessage(wf:lastErrorNode())}]";
+    public static final String SQOOP_DRIVER_PROPERTIES_FILE = "driver.properties";
     private final OrgSpecificSpaceFactory orgSpecificSpaceFactory;
     private final OozieClient oozieClient;
-    private final Serializer serializer;
     private final Supplier<String> random;
-    private OozieJobValidator jobValidator;
-    private OozieJobMapper jobMapper;
-
-    @Value("${job.tracker}")
-    private String jobTracker;
-
-    @Value("${sqoop.metastore}")
-    private String sqoopMetastore;
+    private SqoopJobMapper jobMapper;
+    private JobContext jobContext;
 
     @Autowired
-    public OozieService(OrgSpecificSpaceFactory orgSpecificSpaceFactory, OozieClient oozieClient,
-                        Serializer serializer, Supplier jobIdSupplier, OozieJobValidator oozieJobValidator, OozieJobMapper oozieJobMapper) {
+    public OozieService(OrgSpecificSpaceFactory orgSpecificSpaceFactory, OozieClient oozieClient, Supplier jobIdSupplier,
+                          SqoopJobMapper sqoopJobMapper, JobContext jobContext) {
         this.orgSpecificSpaceFactory = orgSpecificSpaceFactory;
         this.oozieClient = oozieClient;
-        this.serializer = serializer;
         this.random = jobIdSupplier;
-        this.jobValidator = oozieJobValidator;
-        this.jobMapper = oozieJobMapper;
+        this.jobMapper = sqoopJobMapper;
+        this.jobContext = jobContext;
     }
 
-    public OozieJobId sqoopScheduledImportJob(SqoopScheduledImportJob job, UUID orgId)
-        throws IOException {
+    public OozieJobId sqoopScheduledImportJob(SqoopScheduledImportJob job, UUID orgId) throws IOException {
 
-        jobValidator.validate(job);
         jobMapper.adjust(job);
 
         final OrgSpecificSpace space = orgSpecificSpaceFactory.getOrgSpecificSpace(orgId);
-        final SqoopImport sqoopImport = job.getSqoopImport();
 
         final Path ooziePath = space.resolveOozieDir(job.getName(), job.getAppPath());
-        final Path targetPath = space.resolveSqoopTargetDir(job.getName(), sqoopImport.getTargetDir());
-        final Path flagPath = new Path(ooziePath, "sqoop-create");
+        final Path targetPath = space.resolveSqoopTargetDir(job.getName(), job.getSqoopImport().getTargetDir());
 
         job.getSqoopImport().setTargetDir("${targetDir}");
 
-        final String jobId = random.get();
-        final SqoopJob createJob = new SqoopJob(sqoopMetastore).create(jobId, sqoopImport);
-        final SqoopJob execJob = new SqoopJob(sqoopMetastore).exec(jobId, sqoopImport);
+        jobContext.resolveQueueName(orgId);
 
-        final String nameNode = space.getNameNode();
+        final String sqoopWf = space.createOozieWorkflow(ooziePath, sqoopWorkflow(job, new Path(ooziePath, "sqoop-create"), jobContext)).getParent().toString();
 
-        final String sqoopWf = space.createOozieWorkflow(ooziePath, sqoopWorkflow(job, createJob, execJob, flagPath, nameNode, orgId.toString())).getParent().toString();
-        final String sqoopCr = space.createOozieCoordinator(ooziePath, coordinator(job, sqoopWf, targetPath.toUri().toString(), nameNode, orgId.toString())).getParent().toString();
+        final String sqoopCr = space.createOozieCoordinator(ooziePath, coordinator(job, sqoopWf, targetPath.toUri().toString(), jobContext)).getParent().toString();
+
+        space.createFile(new Path(ooziePath, SQOOP_DRIVER_PROPERTIES_FILE), driverProperties(orgId.toString()) );
 
         return oozieClient.submitCoordinatedJob(sqoopCr);
     }
 
-
-    public InputStream coordinator(OozieScheduledJob job, String path, String targetDir, String nameNode, String queueName) {
-
-        final List<PropertyNode> configuration =
-            Lists.newArrayList(new PropertyNode("jobTracker", jobTracker),
-                               new PropertyNode("nameNode", nameNode),
-                               new PropertyNode("queueName", queueName),
-                               new PropertyNode("targetDir", targetDir),
-                               new PropertyNode("oozie.libpath", "/user/oozie/share/lib/"),
-                               new PropertyNode("oozie.use.system.libpath", "true"));
-
-        final OozieSchedule schedule = job.getSchedule();
-
-        final CoordinatorWorkflowNode workflow = new CoordinatorWorkflowNode();
-        workflow.setAppPath(path);
-        workflow.setConfiguration(configuration);
-
-        final CoordinatorActionNode action = new CoordinatorActionNode();
-        action.setWorkflow(workflow);
-
-        final CoordinatorAppNode coordinator = new CoordinatorAppNode();
-        coordinator.setName(job.getName());
-        coordinator.setFrequency(schedule.coordinatorFrequency());
-        coordinator.setStart(schedule.coordinatorStart());
-        coordinator.setEnd(schedule.coordinatorEnd());
-        coordinator.setTimezone(schedule.coordinatorZone());
-        coordinator.setAction(action);
-
-        return toInputStream(coordinator);
+    public InputStream coordinator(OozieScheduledJob job, String path, String targetDir, JobContext jobContext) {
+        return CoordinatorInstance.builder(jobContext)
+                .setName(job.getName())
+                .setAppPath(path)
+                .setTargetDir(targetDir)
+                .setOozieLibpath("/user/oozie/share/lib/")
+                .setOozieUseSystemLibpath(true)
+                .setOozieSchedule(job.getSchedule())
+                .build()
+            .asStream();
     }
 
     public InputStream sqoopWorkflow(SqoopScheduledImportJob sqoopImportJob,
-        SqoopJob sqoopCreateJob, SqoopJob sqoopExecJob, Path flagPath, String nameNode, String queueName) {
+                                     Path flagPath,
+                                     JobContext jobContext) {
+        final String jobId = random.get();
+        final String name = sqoopImportJob.getName();
+        final String sqoopExecJobName = name + "-exec";
+        final String flagJobName = name + "-flag";
+        final String createJobName = name + "-create";
+        final String decisionNodeName = name + "-decision";
 
-        final String workflowName = OozieNameResolver.resolveWorkflowAppName(sqoopImportJob.getName());
-        final String decisionName = sqoopImportJob.getName() + "-decision";
-        final String createName = sqoopImportJob.getName() + "-create";
-        final String flagName = sqoopImportJob.getName() + "-flag";
-        final String execName = sqoopImportJob.getName() + "-exec";
-        final String endName = "end";
-        final String failName = "fail";
-
-        final WorkflowAppNode workflowApp = new WorkflowAppNode(workflowName);
-        workflowApp.setStart(new StartNode(decisionName));
-        workflowApp.setEnd(new EndNode(endName));
-        workflowApp.setKill(new KillNode(failName, ERR_MSG));
-
-        final DecisionNode decision = new DecisionNode(decisionName);
-        final List<SwitchCase> cases = Lists.newArrayList(
-            new CaseNode(createName, String.format("${fs:exists(\"%s\") eq false}", flagPath.toString())),
-            new DefaultNode(execName)
-        );
-        decision.setCases(cases);
-        workflowApp.setDecision(decision);
-
-        final List<PropertyNode> configuration =
-            Lists.newArrayList(new PropertyNode("mapred.job.queue.name", queueName));
-
-        final List<FsAction> prepare = Lists.newArrayList();
-        if (sqoopImportJob.getSqoopImport().getOverwrite()) {
-            prepare.add(new DeleteNode(sqoopImportJob.getSqoopImport().getTargetDir()));
-            prepare.add(new MkdirNode(sqoopImportJob.getSqoopImport().getTargetDir()));
-        }
-
-        final List<WorkflowActionNode> workflowActions = Lists.newArrayList();
-
-        final WorkflowActionNode workflowCreateSqoop = new WorkflowActionNode(createName);
-        workflowCreateSqoop.setOk(new OkNode(flagName));
-        workflowCreateSqoop.setError(new ErrorNode(failName));
-
-        final SqoopActionNode sqoopCreate = new SqoopActionNode();
-        sqoopCreate.setCommand(sqoopCreateJob.command());
-        sqoopCreate.setJobTracker(jobTracker);
-        sqoopCreate.setNameNode(nameNode);
-        sqoopCreate.setPrepare(Lists.newArrayList());
-        sqoopCreate.setConfiguration(configuration);
-
-        workflowCreateSqoop.setAction(sqoopCreate);
-        workflowActions.add(workflowCreateSqoop);
-
-        final WorkflowActionNode workflowCreateFlag = new WorkflowActionNode(flagName);
-        workflowCreateFlag.setOk(new OkNode(execName));
-        workflowCreateFlag.setError(new ErrorNode(failName));
-
-        final FsActionNode fsTouch = new FsActionNode();
-        fsTouch.setPrepare(Lists.newArrayList(new TouchNode(flagPath.toString())));
-        workflowCreateFlag.setAction(fsTouch);
-        workflowActions.add(workflowCreateFlag);
-
-        final WorkflowActionNode workflowExecSqoop = new WorkflowActionNode(execName);
-        workflowExecSqoop.setOk(new OkNode(endName));
-        workflowExecSqoop.setError(new ErrorNode(failName));
-
-        final SqoopActionNode sqoopExec = new SqoopActionNode();
-        sqoopExec.setCommand(sqoopExecJob.command());
-        sqoopExec.setJobTracker(jobTracker);
-        sqoopExec.setNameNode(nameNode);
-        sqoopExec.setConfiguration(configuration);
-        sqoopExec.setPrepare(prepare);
-        workflowExecSqoop.setAction(sqoopExec);
-        workflowActions.add(workflowExecSqoop);
-
-        workflowApp.setWorkflowActions(workflowActions);
-
-        return toInputStream(workflowApp);
+        return WorkflowInstance.builder(jobContext)
+                .setName(name + "-app")
+                .setStartNode(decisionNodeName)
+                .sqoopFileExistDecision(flagPath.toString())
+                   .setName(decisionNodeName)
+                   .then(sqoopExecJobName)
+                   .orElse(createJobName)
+                   .and()
+                .sqoopAction()
+                   .setCommand(new SqoopJob(jobContext.getSqoopMetastore()).create(jobId, sqoopImportJob.getSqoopImport()).command())
+                   .setName(createJobName)
+                   .then(flagJobName)
+                   .addFile(SQOOP_DRIVER_PROPERTIES_FILE)
+                   .and()
+                .createFile()
+                    .setPath(flagPath.toString())
+                    .setName(flagJobName)
+                    .then(sqoopExecJobName)
+                    .and()
+                .sqoopAction()
+                    .setCommand(new SqoopJob(jobContext.getSqoopMetastore()).exec(jobId, sqoopImportJob.getSqoopImport()).command())
+                    .setName(sqoopExecJobName)
+                    .then("end")
+                    .and()
+                .sqoopKill(ERR_MSG)
+                .build()
+                .asStream();
     }
 
-    // TODO Write input stream implementation to intercept incoming lines
-    private InputStream toInputStream(Object object) {
-        try (StringWriter writer = new StringWriter(4 * 1024)) {
-            serializer.write(object, writer);
-
-            String configuration = writer.toString();
-            LOGGER.info("\n{}", configuration);
-
-            return IOUtils.toInputStream(configuration, StandardCharsets.UTF_8);
-        } catch (Exception ex) {
-            throw new IllegalStateException("Unable to convert object to input stream", ex);
-        }
+    private InputStream driverProperties(String orgId) {
+        String oracleOsuserParam = "v$session.osuser=" + orgId.substring(0,29) + "\n";
+        return new ByteArrayInputStream(oracleOsuserParam.getBytes(StandardCharsets.UTF_8));
     }
-
 }

@@ -32,4 +32,6 @@ public class WorkflowSchedulerConfigurationEntity {
 
     private String organizationDirectory;
 
+    private long minimumFrequencyInSeconds;
+
 }

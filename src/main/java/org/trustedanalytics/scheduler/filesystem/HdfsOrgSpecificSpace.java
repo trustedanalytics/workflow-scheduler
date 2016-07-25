@@ -18,10 +18,13 @@ package org.trustedanalytics.scheduler.filesystem;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.AccessControlException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.trustedanalytics.scheduler.security.TokenProvider;
 import org.trustedanalytics.scheduler.utils.StreamUtils;
+
+import org.springframework.security.access.AccessDeniedException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,6 +36,10 @@ import java.util.function.Supplier;
 public class HdfsOrgSpecificSpace implements OrgSpecificSpace {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HdfsOrgSpecificSpace.class);
+    public static final String COORDINATOR_FILE_NAME = "coordinator.xml";
+    public static final String WORKFLOW_FILE_NAME = "workflow.xml";
+    public static final String SQOOP_DEFAULT_TARGET_DIR = "sqoop-imports";
+    public static final String OOZIE_JOBS_DIR = "oozie-jobs";
 
     private final FileSystem fileSystem;
     private final Path root;
@@ -44,21 +51,21 @@ public class HdfsOrgSpecificSpace implements OrgSpecificSpace {
         Objects.requireNonNull(orgId);
 
         this.fileSystem = fileSystem;
-        this.root = new Path(String.format("hdfs://nameservice1/org/%s/", orgId));
+        this.root = new Path(String.format(fileSystem.getUri() + "/org/%s/", orgId));
         this.random = () -> UUID.randomUUID().toString();
         this.tokenProvider = tokenProvider;
     }
 
     @Override
-    public Path createOozieCoordinator(Path coordinatorDirPath, InputStream in) throws IOException {
-        final Path coordinatorPath = new Path(coordinatorDirPath, "coordinator.xml");
+    public Path createOozieCoordinator(Path oozieJobDir, InputStream in) throws IOException {
+        final Path coordinatorPath = new Path(oozieJobDir, COORDINATOR_FILE_NAME);
         createFile(coordinatorPath, in);
         return coordinatorPath;
     }
 
     @Override
-    public Path createOozieWorkflow(Path workflowDirPath, InputStream in) throws IOException {
-        final Path workflowPath = new Path(workflowDirPath, "workflow.xml");
+    public Path createOozieWorkflow(Path oozieJobDir, InputStream in) throws IOException {
+        final Path workflowPath = new Path(oozieJobDir, WORKFLOW_FILE_NAME);
         createFile(workflowPath, in);
         return workflowPath;
     }
@@ -67,7 +74,7 @@ public class HdfsOrgSpecificSpace implements OrgSpecificSpace {
     public Path resolveSqoopTargetDir(String jobName, String targetDir) {
 
         if(StringUtils.isEmpty(targetDir)) {
-            return resolveDir("sqoop-imports", jobName, random.get());
+            return resolveDir(SQOOP_DEFAULT_TARGET_DIR, jobName, random.get());
         } else {
             return resolveDir("user", tokenProvider.getUserId(), targetDir);
         }
@@ -76,7 +83,7 @@ public class HdfsOrgSpecificSpace implements OrgSpecificSpace {
     @Override
     public Path resolveOozieDir(String jobName, String appPath) {
         if(StringUtils.isEmpty(appPath)) {
-            return resolveDir("oozie-jobs", jobName, random.get());
+            return resolveDir(OOZIE_JOBS_DIR, jobName, random.get());
         } else {
             return resolveDir(appPath);
         }
@@ -93,10 +100,13 @@ public class HdfsOrgSpecificSpace implements OrgSpecificSpace {
                      .reduce(new Path(root, path), Path::new, Path::new);
     }
 
-    private void createFile(Path path, InputStream in) {
+    @Override
+    public void createFile(Path path, InputStream in) {
         try {
             StreamUtils.copy(in, fileSystem.create(path));
             LOGGER.info("Created file: " + path);
+        } catch (AccessControlException ex) {
+            throw new AccessDeniedException("Permission denied for given organization", ex);
         } catch (IOException ex) {
             throw new IllegalStateException("Unable to create file: " + path, ex);
         }

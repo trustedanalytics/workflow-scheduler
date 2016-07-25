@@ -15,48 +15,48 @@
  */
 package org.trustedanalytics.scheduler;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.trustedanalytics.scheduler.client.OozieClient;
-import org.trustedanalytics.scheduler.config.Database;
-
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-
-import org.simpleframework.xml.Serializer;
-import org.simpleframework.xml.core.Persister;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ClassPathResource;
+import org.trustedanalytics.scheduler.oozie.serialization.JobContext;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Collection;
-
-import org.trustedanalytics.scheduler.filesystem.HdfsConfigProvider;
-import org.trustedanalytics.scheduler.rest.RestOperationsFactory;
-import org.trustedanalytics.scheduler.security.TokenProvider;
-import rx.Observable;
 
 @Configuration
 public class WorkflowSchedulerConfiguration {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowSchedulerConfiguration.class);
 
-    @Autowired
-    private RestOperationsFactory restOperationsFactory;
+    @Value("${job.tracker}")
+    private String jobTracker;
 
-    @Autowired
-    private HdfsConfigProvider hdfsConfigProvider;
+    @Value("${sqoop.metastore}")
+    private String sqoopMetastore;
 
-    @Autowired
-    private TokenProvider oauthTokenProvider;
+    @Value("${namenode}")
+    private String namenode;
+
+    @Value("${oozie.api.url:host}")
+    private String oozieApiUrl;
+
+
+    @Bean
+    public JobContext jobContext() {
+        LOGGER.info("Creating job context from env");
+        return JobContext.builder()
+            .jobTracker(jobTracker)
+            .sqoopMetastore(sqoopMetastore)
+            .nameNode(namenode)
+            .oozieApiUrl(oozieApiUrl)
+            .build();
+    }
 
     @Bean
     public ObjectMapper objectMapper() {
@@ -66,32 +66,9 @@ public class WorkflowSchedulerConfiguration {
         final SimpleModule simpleModule = new SimpleModule();
         simpleModule.addDeserializer(ZoneId.class, new ZoneIdDeserializer());
         simpleModule.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer());
-
         objectMapper.registerModules(new Jdk8Module(), simpleModule);
 
         return objectMapper;
     }
 
-
-    @Bean
-    public OozieClient oozieClient() throws IOException {
-        return new OozieClient(restOperationsFactory, hdfsConfigProvider, oauthTokenProvider);
-    }
-
-    @Bean
-    public Observable<Database> databaseEngines() {
-        try (final InputStream input = new ClassPathResource("databases.json").getInputStream()) {
-            TypeReference<Collection<Database>> type = new TypeReference<Collection<Database>>() {};
-            Collection<Database> databases = objectMapper().readValue(input, type);
-            return Observable.from(databases);
-        } catch (IOException e) {
-            LOGGER.error("Exception while reading databases: ", e);
-            throw new IllegalStateException("Unable to load supported databases");
-        }
-    }
-
-    @Bean
-    public Serializer serializer() {
-        return new Persister();
-    }
 }

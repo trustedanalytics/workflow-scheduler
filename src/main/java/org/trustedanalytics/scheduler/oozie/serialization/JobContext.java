@@ -13,17 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.trustedanalytics.scheduler.config;
+package org.trustedanalytics.scheduler.oozie.serialization;
 
-import java.util.Collection;
-
+import lombok.Builder;
 import lombok.Data;
 
+import java.io.IOException;
+import java.util.UUID;
+
 @Data
-public class Database {
+@Builder
+public class JobContext {
 
-    protected String name;
-    protected Collection<JDBCDriver> drivers;
-    protected Schema schema;
+    private String queueName;
+    private String jobTracker;
+    private String nameNode;
+    private String sqoopMetastore;
+    private String oozieApiUrl;
 
+    public void resolveQueueName(UUID org) throws IOException {
+        this.queueName = org.toString();
+    }
 }

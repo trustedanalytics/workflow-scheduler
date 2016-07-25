@@ -19,6 +19,8 @@ import org.trustedanalytics.scheduler.oozie.jobs.OozieScheduledJob;
 
 import lombok.Data;
 
+import javax.validation.executable.ValidateOnExecution;
+
 @Data
 public class SqoopScheduledImportJob extends OozieScheduledJob {
 

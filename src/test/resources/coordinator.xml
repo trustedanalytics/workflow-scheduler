@@ -1,7 +1,7 @@
-<coordinator-app name="test" frequency="${coord:minutes(10)}" start="2077-07-04T08:15Z" end="2077-07-06T08:15Z" timezone="UTC" xmlns="uri:oozie:coordinator:0.4">
+<coordinator-app xmlns="uri:oozie:coordinator:0.4" end="2077-07-06T08:15Z" frequency="${coord:minutes(10)}" name="test"  start="2077-07-04T08:15Z"  timezone="UTC" >
     <action>
         <workflow>
-            <app-path></app-path>
+            <app-path>oozie-jobs/test/FAKE_GUID</app-path>
             <configuration>
                 <property>
                     <name>jobTracker</name>

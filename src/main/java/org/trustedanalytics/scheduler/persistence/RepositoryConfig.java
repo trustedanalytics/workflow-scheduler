@@ -43,16 +43,6 @@ public class RepositoryConfig {
     Environment env;
 
     @Bean
-    @Profile("local")
-    public DataSource localDataSource() {
-        LOGGER.info("Creating H2 data source");
-        return new EmbeddedDatabaseBuilder()
-                .setName("localdb")
-                .setType(EmbeddedDatabaseType.H2)
-                .build();
-    }
-
-    @Bean
     @Profile("cloud")
     public DataSource cloudDataSource() {
         LOGGER.info("Creating postgresql data source");

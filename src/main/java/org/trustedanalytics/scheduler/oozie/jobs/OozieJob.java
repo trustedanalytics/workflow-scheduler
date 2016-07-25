@@ -23,5 +23,4 @@ public abstract class OozieJob {
     protected String name;
 
     protected String appPath;
-
 }
